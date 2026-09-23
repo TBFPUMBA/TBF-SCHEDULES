@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Расписание на каждый день</title>
+<style>
+:root{--bg:#f4f5f9;--card:#fff;--tx:#1d2030;--mu:#7a8094;--ac:#4f6df5;--bd:#e3e6ef}
+@media (prefers-color-scheme:dark){:root{--bg:#14161f;--card:#1e2130;--tx:#eceef7;--mu:#8b91a8;--ac:#7b91ff;--bd:#2c3044}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--tx);padding:12px;max-width:900px;margin:auto}
+h1{font-size:22px;margin:8px 0 14px}h2{font-size:16px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{background:var(--ac);color:#fff;border:0;border-radius:9px;padding:9px 14px;font-size:14px;cursor:pointer}
+button.g{background:transparent;color:var(--ac);border:1px solid var(--bd)}
+input,textarea{width:100%;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:9px;padding:9px;font:inherit;font-size:14px}
+textarea{min-height:90px;resize:vertical}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal div{text-align:center;padding:9px 0;border-radius:8px;font-size:14px}
+.hd{color:var(--mu);font-size:12px}
+.d{cursor:pointer;border:1px solid transparent;position:relative}
+.d:hover{border-color:var(--ac)}
+.d.t{font-weight:700;color:var(--ac)}
+.d.s{background:var(--ac);color:#fff}
+.d.h::after{content:"";position:absolute;bottom:3px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor;opacity:.6}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+label{font-size:13px;color:var(--mu);display:block;margin:6px 0 3px}
+.it{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.it b{min-width:52px;color:var(--ac)}
+.mu{color:var(--mu);font-size:13px}
+#st{font-size:13px;margin-top:8px}
+
+/* анимации и переходы */
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes in{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(79,109,245,.45)}50%{box-shadow:0 0 0 7px rgba(79,109,245,0)}}
+@keyframes shine{to{background-position:200% center}}
+h1{background:linear-gradient(90deg,var(--ac),#b06bff,var(--ac));background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s linear infinite}
+.card{animation:up .6s cubic-bezier(.2,.8,.2,1) both;transition:box-shadow .3s,transform .3s}
+.card:hover{box-shadow:0 8px 26px rgba(79,109,245,.13);transform:translateY(-2px)}
+.card:nth-of-type(2){animation-delay:.08s}.card:nth-of-type(3){animation-delay:.16s}.card:nth-of-type(4){animation-delay:.24s}
+button{transition:transform .2s,box-shadow .2s,background .2s,opacity .2s}
+button:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(79,109,245,.3)}
+button:active{transform:scale(.94)}
+button.g:hover{background:rgba(79,109,245,.1);box-shadow:none}
+.d{transition:transform .18s,background .25s,color .25s,border-color .2s}
+.d:hover{transform:scale(1.14)}
+.d.s{animation:pop .35s ease-out;box-shadow:0 4px 12px rgba(79,109,245,.4)}
+.d.t:not(.s){animation:glow 2.4s ease-in-out infinite}
+.it{animation:in .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*70ms);transition:background .2s,padding-left .2s}
+.it:hover{padding-left:8px}
+input,textarea{transition:border-color .2s,box-shadow .2s}
+input:focus,textarea:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px rgba(79,109,245,.18)}
+#st{transition:opacity .3s}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.ar{justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)}
+.ar input[type=time]{width:120px}
+.ck{display:flex;gap:8px;align-items:center;margin:0;color:var(--tx);font-size:14px;cursor:pointer}
+.ck input{width:auto}
+</style>
+</head>
+<body>
+<h1>📅 Расписание на каждый день</h1>
+
+<div class="card">
+  <div class="row" style="justify-content:space-between;margin-bottom:10px">
+    <button class="g" id="prev">◀</button><h2 id="mt" style="margin:0"></h2><button class="g" id="next">▶</button>
+  </div>
+  <div class="cal" id="cal"></div>
+</div>
+
+<div class="card">
+  <h2 id="dt"></h2>
+  <div id="plan"></div>
+  <label>Изменить только этот день (формат: 08:00 Зарядка, каждая задача с новой строки)</label>
+  <textarea id="edit"></textarea>
+  <div class="row" style="margin-top:8px">
+    <button id="save">Сохранить день</button>
+    <button class="g" id="reset">Вернуть по шаблону</button>
+    <button id="send">📨 Отправить боту</button>
+  </div>
+  <div id="st" class="mu"></div>
+</div>
+
+<div class="card">
+  <h2>Шаблон недели (по нему расписание строится автоматически)</h2>
+  <div class="mu" style="margin-bottom:8px">Пиши по строке на задачу: <code>время текст</code>, например <code>09:00 Учёба</code></div>
+  <div class="grid" id="week"></div>
+  <div class="row" style="margin-top:10px"><button id="saveW">Сохранить шаблон</button><button class="g" id="exp">⬇️ Экспорт</button><button class="g" id="imp">⬆️ Импорт</button><input type="file" id="fi" accept=".json,application/json" hidden></div>
+</div>
+
+<div class="card">
+  <h2>🤖 Телеграм-бот</h2>
+  <label>Токен твоего бота из @BotFather (хранится только в твоём браузере)</label>
+  <input id="tok" type="password" placeholder="123456:ABC...">
+  <label>Chat ID</label>
+  <div class="row" style="flex-wrap:nowrap"><input id="chat" placeholder="сначала напиши боту /start"><button class="g" id="find" style="white-space:nowrap">Найти</button></div>
+  <label>Авто-отправка по дням: отметь день и выбери время, тогда в этот день боту уйдёт расписание именно этого дня (работает, пока страница открыта)</label>
+  <div id="autoList"></div>
+  <div class="row" style="margin-top:10px"><button id="saveB">Сохранить настройки бота</button></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const DN=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const MN=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const ORDER=[1,2,3,4,5,6,0];
+let S={tpl:{},over:{},tok:'',chat:'',at:'08:00',auto:false,last:''};
+try{S=Object.assign(S,JSON.parse(localStorage.getItem('rasp')||'{}'))}catch(e){}
+const persist=()=>{try{localStorage.setItem('rasp',JSON.stringify(S))}catch(e){}};
+const key=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let cur=new Date(),sel=new Date();cur.setDate(1);
+
+function plan(d){
+  const o=S.over[key(d)];
+  const txt=o!==undefined?o:(S.tpl[d.getDay()]||'');
+  return txt.split('\n').map(x=>x.trim()).filter(Boolean).sort();
+}
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const anim=(el,y,x)=>{if(!RM)el.animate([{opacity:0,transform:'translate('+x+'px,'+y+'px)'},{opacity:1,transform:'none'}],{duration:320,easing:'cubic-bezier(.2,.8,.2,1)'})};
+function drawCal(){
+  $('mt').textContent=MN[cur.getMonth()]+' '+cur.getFullYear();
+  let h=ORDER.map(i=>'<div class="hd">'+DN[i].slice(0,2)+'</div>').join('');
+  const first=(cur.getDay()+6)%7,n=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();
+  for(let i=0;i<first;i++)h+='<div></div>';
+  const tk=key(new Date());
+  for(let i=1;i<=n;i++){
+    const d=new Date(cur.getFullYear(),cur.getMonth(),i),k=key(d);
+    h+='<div class="d'+(k===tk?' t':'')+(k===key(sel)?' s':'')+(plan(d).length?' h':'')+'" data-d="'+i+'">'+i+'</div>';
+  }
+  $('cal').innerHTML=h;
+  $('cal').querySelectorAll('.d').forEach(e=>e.onclick=()=>{sel=new Date(cur.getFullYear(),cur.getMonth(),+e.dataset.d);drawCal();drawDay()});
+}
+function drawDay(){
+  anim($('dt'),-8,0);
+  $('dt').textContent=DN[sel.getDay()]+', '+sel.getDate()+' '+MN[sel.getMonth()].toLowerCase();
+  const p=plan(sel);
+  $('plan').innerHTML=p.length?p.map((x,i)=>{const m=x.match(/^(\d{1,2}[:.]\d{2})\s*(.*)$/);return '<div class="it" style="--i:'+i+'"><b>'+(m?esc(m[1]):'•')+'</b><span>'+esc(m?m[2]:x)+'</span></div>'}).join(''):'<div class="mu">На этот день ничего нет. Заполни шаблон недели ниже 👇</div>';
+  const o=S.over[key(sel)];
+  $('edit').value=o!==undefined?o:(S.tpl[sel.getDay()]||'');
+}
+function drawWeek(){
+  $('week').innerHTML=ORDER.map(i=>'<div><label>'+DN[i]+'</label><textarea data-w="'+i+'">'+esc(S.tpl[i]||'')+'</textarea></div>').join('');
+}
+function fmt(d){
+  const p=plan(d);
+  return '📅 '+DN[d.getDay()]+', '+d.getDate()+' '+MN[d.getMonth()].toLowerCase()+'\n\n'+(p.length?p.join('\n'):'Свободный день 🎉');
+}
+async function tg(method,body){
+  const r=await fetch('https://api.telegram.org/bot'+S.tok+'/'+method,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+  return r.json();
+}
+async function sendDay(d){
+  if(!S.tok||!S.chat){$('st').textContent='⚠️ Заполни токен и Chat ID ниже';return false}
+  try{const j=await tg('sendMessage',{chat_id:S.chat,text:fmt(d)});$('st').textContent=j.ok?'✅ Отправлено боту':'❌ '+j.description;return j.ok}
+  catch(e){$('st').textContent='❌ Нет связи с Telegram';return false}
+}
+
+$('prev').onclick=()=>{cur.setMonth(cur.getMonth()-1);drawCal();anim($('cal'),0,-24)};
+$('next').onclick=()=>{cur.setMonth(cur.getMonth()+1);drawCal();anim($('cal'),0,24)};
+$('save').onclick=()=>{S.over[key(sel)]=$('edit').value;persist();drawCal();drawDay();$('st').textContent='✅ День сохранён'};
+$('reset').onclick=()=>{delete S.over[key(sel)];persist();drawCal();drawDay();$('st').textContent='Вернул по шаблону'};
+$('send').onclick=()=>sendDay(sel);
+$('saveW').onclick=()=>{document.querySelectorAll('[data-w]').forEach(t=>S.tpl[t.dataset.w]=t.value);persist();drawCal();drawDay();$('st').textContent='✅ Шаблон сохранён'};
+$('saveB').onclick=()=>{S.tok=$('tok').value.trim();S.chat=$('chat').value.trim();persist();$('st').textContent='✅ Настройки бота сохранены'};
+$('find').onclick=async()=>{
+  S.tok=$('tok').value.trim();
+  if(!S.tok){$('st').textContent='⚠️ Сначала вставь токен';return}
+  try{
+    const j=await tg('getUpdates');
+    const u=(j.result||[]).map(x=>x.message||x.channel_post).filter(Boolean).pop();
+    if(u){$('chat').value=u.chat.id;S.chat=String(u.chat.id);persist();$('st').textContent='✅ Chat ID найден'}
+    else $('st').textContent=j.ok?'⚠️ Напиши боту /start и нажми снова':'❌ '+j.description;
+  }catch(e){$('st').textContent='❌ Нет связи с Telegram'}
+};
+$('exp').onclick=()=>{
+  const b=new Blob([JSON.stringify({tpl:S.tpl,over:S.over},null,1)],{type:'application/json'});
+  const u=URL.createObjectURL(b),a=document.createElement('a');
+  a.href=u;a.download='raspisanie-backup.json';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),1000);$('st').textContent='✅ Файл сохранён';
+};
+$('imp').onclick=()=>$('fi').click();
+$('fi').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{
+    const d=JSON.parse(r.result);
+    if(!d||typeof d.tpl!=='object'||typeof d.over!=='object')throw 0;
+    S.tpl=d.tpl;S.over=d.over;persist();drawCal();drawDay();drawWeek();$('st').textContent='✅ Расписание загружено из файла';
+  }catch(x){$('st').textContent='❌ Это не файл экспорта расписания'}e.target.value=''};
+  r.readAsText(f);
+};
+function drawAuto(){
+  const L=$('autoList');
+  L.innerHTML=ORDER.map(i=>{const c=(S.sched&&S.sched[i])||{on:false,time:'08:00'};
+    return '<div class="row ar"><label class="ck"><input type="checkbox" data-a="'+i+'"'+(c.on?' checked':'')+'> '+DN[i]+'</label><input type="time" data-t="'+i+'" value="'+c.time+'"></div>'}).join('');
+  L.querySelectorAll('[data-a],[data-t]').forEach(e=>e.onchange=()=>{
+    const i=e.dataset.a!==undefined?e.dataset.a:e.dataset.t;
+    S.sched=S.sched||{};
+    S.sched[i]=S.sched[i]||{on:false,time:'08:00'};
+    if(e.dataset.a!==undefined)S.sched[i].on=e.checked;else S.sched[i].time=e.value||'08:00';
+    persist();$('st').textContent='✅ Автоотправка сохранена';
+  });
+}
+setInterval(()=>{
+  if(!S.tok||!S.chat||!S.sched)return;
+  const n=new Date(),c=S.sched[n.getDay()];
+  if(!c||!c.on||S.last===key(n))return;
+  const [h,m]=c.time.split(':').map(Number),diff=n.getHours()*60+n.getMinutes()-(h*60+m);
+  if(diff>=0&&diff<=5){S.last=key(n);persist();sendDay(n)}
+},20000);
+
+$('tok').value=S.tok;$('chat').value=S.chat;drawAuto();
+drawCal();drawDay();drawWeek();
+</script>
+</body>
+</html>
