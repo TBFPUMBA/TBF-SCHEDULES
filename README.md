@@ -15,6 +15,7 @@
 1. Відкрий сайт
 2. Додай розпис
 3. Плануй день
+4. Силка:https://tbfpumba.github.io/TBF-SCHEDULES/
 
 ---
 
